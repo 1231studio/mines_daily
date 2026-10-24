@@ -910,7 +910,7 @@
     <span class="ebadge">${''}</span>
   </button>
   <button class="daystreak-btn" id="dayChip" aria-label="연속 출석, 내 기록 열기"><span class="dsico"></span><b id="dayStreakNum">0</b></button>
-  <button class="round-btn" id="btnSet" title="설정" aria-label="설정"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.7 7.7 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1l-.4-2.6h-3.8l-.4 2.6a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.7 7.7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.8 1.7 1l.4 2.6h3.8l.4-2.6c.6-.2 1.2-.6 1.7-1l2.4 1 2-3.4-2-1.6Z"/><circle cx="12" cy="12" r="3.1"/></svg></button>
+  <button class="round-btn" id="btnSet" title="설정" aria-label="설정"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.95 5.31L10.00 2.61A9.60 9.60 0 0 1 14.00 2.61L14.05 5.31A7.00 7.00 0 0 1 16.77 6.88L19.13 5.58A9.60 9.60 0 0 1 21.13 9.03L18.82 10.43A7.00 7.00 0 0 1 18.82 13.57L21.13 14.97A9.60 9.60 0 0 1 19.13 18.42L16.77 17.12A7.00 7.00 0 0 1 14.05 18.69L14.00 21.39A9.60 9.60 0 0 1 10.00 21.39L9.95 18.69A7.00 7.00 0 0 1 7.23 17.12L4.87 18.42A9.60 9.60 0 0 1 2.87 14.97L5.18 13.57A7.00 7.00 0 0 1 5.18 10.43L2.87 9.03A9.60 9.60 0 0 1 4.87 5.58L7.23 6.88A7.00 7.00 0 0 1 9.95 5.31Z"/><circle cx="12" cy="12" r="3.2"/></svg></button>
 </div>
 
 <div class="dailycard" id="dailyCard" hidden></div>
@@ -1772,8 +1772,8 @@ function chapBarHtml(pr){
       <i>${from.toLocaleString()} ~ ${ch.to.toLocaleString()}판</i></div>`;
   }).join('');
   return `<button class="chapbar" data-chaptoggle="1"><b>${pr.ch.icon} ${pr.ch.name}</b>
-      <div class="chaptrack"><i style="width:${Math.round(pr.done/pr.total*100)}%"></i></div>
-      <span>${pr.done} / ${pr.total}판</span><span class="caret">▾</span></button>
+      <div class="chaptrack"><i style="width:${Math.floor(pr.done/pr.total*100)}%"></i></div>
+      <span>${pr.at.toLocaleString()} / ${pr.end.toLocaleString()}판</span><span class="caret">▾</span></button>
     <div class="chaplist">${rows}</div>`;
 }
 function chapterOf(lv){
@@ -1786,8 +1786,16 @@ function chapterProgress(lv){
   if(idx < 0) idx = CHAPTERS.length - 1;
   const from = idx > 0 ? CHAPTERS[idx-1].to : 0;
   const ch = CHAPTERS[idx];
-  return {ch, from, done: Math.max(0, lv - from), total: ch.to - from};
+  /* [95a] 이 구간에서 실제로 깬 판 수로 센다. 예전엔 "지금 판 번호 − 구간 시작"이라 아직 안 깬 지금 판까지 쳐서
+     201판을 하는 중에 101/200 으로 1판 앞서 나갔다(사용자 제보). 지난 판을 다시 열었을 때도 구간 진행이 줄어들어 보였다 */
+  let done = 0;
+  for(const k in S.recs){ const n = +k; if(n > from && n <= ch.to) done++; }
+  /* 글자는 "지금 판 / 구간 끝"(사용자 결정: 201판이면 201 / 300판) — 판 번호·구간 목록(101 ~ 300판)과 같은 숫자.
+     막대는 이 구간에서 깬 비율 */
+  return {ch, from, done, total: ch.to - from, at: lv, end: ch.to};
 }
+/* 구간 표시는 지금 열어 둔 판이 아니라 깨서 열린 가장 먼 판 기준 — 지난 판을 다시 열어도 진행이 흔들리지 않게 */
+const levelFrontier = () => Math.min(LEVELS.length, Math.max(S.maxLevel, S.level));
 
 const PALETTE = [
   "#3B7DEA", "#E03B4B", "#12A896", "#9B59E0", "#F0A020", "#69C93F", "#EC4899", "#22C0E8",
@@ -4447,6 +4455,7 @@ function settings(){
     </p>
     <button class="primary" id="btnClose">돌아가기</button>
     <button class="ghost" id="btnWipe" style="color:#E4484F">처음부터 다시 시작</button>
+    ${Ads.needsPrivacyButton() ? '<button class="ghost" id="btnPrivacy">🔒 광고 개인정보 설정</button>' : ''}
     ${devOn ? '<button class="ghost" id="btnDevOpen">🛠 개발자 도구</button>' : ''}
     <p class="note" id="devSecret" style="margin:14px 0 2px; font-size:10.5px; opacity:.75; touch-action:manipulation; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent">
       소리 출처 · freesound.org<br>
@@ -4547,6 +4556,7 @@ function settings(){
   document.getElementById('btnClose').onclick = () => { Snd.release(); closeSheet(); };
   { const sc = document.getElementById('devSecret'); if(sc) sc.onclick = devTap; }
   { const dv = document.getElementById('btnDevOpen'); if(dv) dv.onclick = () => { Snd.release(); devPanel(); }; }
+  { const bp = document.getElementById('btnPrivacy'); if(bp) bp.onclick = () => { Snd.release(); Vib.tap(); Ads.showPrivacyOptions(); }; }   // [97a]
   document.getElementById('btnWipe').onclick = () => {
     Snd.release();
     openSheet(`
@@ -4678,7 +4688,7 @@ function levelSelect(page, tab){
         `<button class="lvtab${S.lvTab===k?' on':''}" data-tab="${k}">${label}</button>`).join('')}
     </div>
     <p class="note" style="margin:2px 0 8px">${desc}</p>
-    ${(() => { const pr = chapterProgress(S.level);
+    ${(() => { const pr = chapterProgress(levelFrontier());
       return chapBarHtml(pr); })()}
     ${maxPage > 1 ? `<div class="navrow" style="margin:0 0 10px">
       <button class="navbtn" id="lvPrev" ${S.lvPage<=1?'disabled':''}>◀ 이전</button>
@@ -4763,9 +4773,9 @@ function statsSheet(){
       <div><dt>가장 멀리 간 판</dt><dd>${S.maxLevel}판</dd></div>
       <div><dt>무실수 연속 최고</dt><dd>${S.bestStreak || 0}판</dd></div>
       <div><dt>지금 연속</dt><dd>${S.streak || 0}판</dd></div>
-      <div><dt>지금 구간</dt><dd>${chapterOf(S.level).icon} ${chapterOf(S.level).name}</dd></div>
+      <div><dt>지금 구간</dt><dd>${chapterOf(levelFrontier()).icon} ${chapterOf(levelFrontier()).name}</dd></div>
     </div>
-    ${(() => { const pr = chapterProgress(S.level);
+    ${(() => { const pr = chapterProgress(levelFrontier());
       return chapBarHtml(pr); })()}
     <button class="ghost" id="stBack">설정으로</button>
   `);
@@ -5772,12 +5782,32 @@ const Ads = (() => {
                      ? window.Capacitor.Plugins.AdMob : null;
   let ready = false, rewardedLoaded = false;
 
+  /* [97a] 개인정보 동의(UMP) — EEA·영국·스위스 사용자에게만 구글 동의 창이 뜬다(AdMob '유럽 규정' 메시지).
+     구글 권장 순서: 켤 때마다 동의 정보를 새로 받고 → 필요하면 창을 띄우고 → 광고를 요청해도 될 때만 광고를 시작한다.
+     한국 등 그 밖의 나라는 NOT_REQUIRED 라 창 없이 지금과 똑같이 바로 광고가 나온다.
+     EEA 사용자는 언제든 동의를 바꿀 수 있어야 해서, 그런 사람에게만 설정에 '광고 개인정보 설정' 버튼을 보인다. */
+  let privacyRequired = false, consentTries = 0;
+  async function consent(A){
+    try{
+      let info = await A.requestConsentInfo();
+      if(info && info.status === 'REQUIRED' && info.isConsentFormAvailable) info = await A.showConsentForm();
+      privacyRequired = !!info && info.privacyOptionsRequirementStatus === 'REQUIRED';
+      return !!(info && info.canRequestAds);
+    }catch(e){ return null; }             // 확인 실패(인터넷 등) — 이번엔 광고를 안 띄운다
+  }
+
   let started = false;
   async function init(){
     if(started) return;                   // deviceready 와 800ms 타임아웃이 둘 다 오면 두 번 돈다
     started = true;
     const A = plugin();
     if(!A){ started = false; return; }    // 웹에서는 조용히 넘어간다 (플러그인이 늦게 붙을 수도 있다)
+    const ok = await consent(A);
+    if(ok !== true){                      // 동의 전이거나 확인 실패 → 광고 요청 금지. 30초 뒤 두 번까지만 다시 본다
+      started = false;
+      if(++consentTries <= 2) setTimeout(init, 30000);
+      return;
+    }
     try{
       /* 실제로 붙은 배너 높이(dp)를 받아 광고 자리 높이(--adh)를 맞추고 판을 다시 잰다.
          적응형 배너는 폭에 따라 50~90dp 사이라 56px 고정값과 어긋날 수 있다. */
@@ -5875,7 +5905,14 @@ const Ads = (() => {
     return inFlight;
   }
 
-  return { init, reward, showBanner };
+  /* [97a] 설정의 '광고 개인정보 설정' — EEA 사용자가 동의를 다시 고를 수 있게 */
+  const needsPrivacyButton = () => privacyRequired;
+  async function showPrivacyOptions(){
+    const A = plugin();
+    if(!A) return;
+    try{ await A.showPrivacyOptionsForm(); }catch(e){}
+  }
+  return { init, reward, showBanner, needsPrivacyButton, showPrivacyOptions };
 })();
 
 if(window.Capacitor) document.addEventListener('deviceready', () => Ads.init(), { once: true });
@@ -5926,6 +5963,6 @@ document.addEventListener('visibilitychange', () => {
   setTimeout(hide, 1200);                 // 혹시 놓쳤을 때를 위한 두 번째 시도
 })();
 </script>
-<!-- BAKE-ENGINE: 2026-08-21 09:44Z sha1=dfb557f91be0 lv1=19 lv3333=135 | PATCH-2026-08-21b: vol/back/splash | PATCH-2026-08-27a: ghostclick/save-clean/ad-dismiss/fitboard | 27b: tutbtn/scoreorder/rules4x4 | 27c(검증제안): touchstart-ghost/heartgate/sheet-return/ad-inflight | 27d: addeclined-ghostbtn | 27e: save-coalesce | 28a: freehint20/no-pct/tip-blink | 28b: fxvol | 28c: stars-by-miss/recs-migrate | 28d(2차검증): tip-freeze/tip-double/flawless/data-ad/init-guard | 28e: savegap-1s | 29a: rebake-lv1-30 | 29b: sound-settings-order | 29c: fxicon/sweep-stars | 30a: tap-outside/cheer-loudness | 30b: one-tutorial-popup | 30c: report-no-overflow/volrow-narrow | 31a: page-picker | 32a: hint-hall-general | 33a: hint-hall-full-k | 34a(3차검증): miss-star-sync/sweep-reason/pen-cap-n/ads-retry | 34b: tip-italic-fix | 35a: font-coverage | 36a: tidy-note/tapthrough/tip-close | 37a: tip-rewrite | 38a(4차검증): hall-axis-words/press-title-axis/tidy-region/tidy-autosweep-gate/combo-dup | 38b(5차검증): hint-cost-fix/dup-sentence/title-clash/strategy-text | 38c(6차검증제안): hint-cost-digits/hall-fill-axis/squeeze-title-dup/guard-name | 38d: reset-gate-fix | 39a: korean-linebreak | 40a: tip-contradiction-form | 41a: tip-linebreaks | 42a: flawless-fix/flawless-show/starpct-cap | 43a: flawless-allfaces-3s-cheer | 44a: crowd-sound/firework-rework | 45a: applause-rework | 46a: hide-star-penalty | 47a: sweep-pen-show/playtime | 47b: daily-streak | 47c: chapters-badges | 47d: colorblind-patterns | 47e: daily-toast | 47f: font-safe-wording | 48a: sound-balance | 49a: louder-max | 50a: louder-key/slider-preview | 51a: tip-particle-bold | 52a: tip-unbold | 53a: first-time-learn | 54a: learn-linebreaks | 55a(8차검증): drag-xtaps/boom-clear/learn-text/daily-visible/vol-fallback | 56a: real-crowd-sample | 57a: vib-pattern-fix/kits-trim/slider-ux/credit | 58a: real-firework-samples | 59a: credit-exact | 60a(9차검증): vib-silent-load/preload-retry/credit-derivative | 61a: credit-cc0-fix | 62a: stats-layout | 63a: chapter-list/statbox-align | 64a: chaplist-align | 65a(10차검증): drop-dead-vars | 66a: credit-bottom | 67a: hall-rewrite | 68a: hall-unify | 69a(12차검증): hall-A1 | 70a: hall-이 | 71a(next): statbox-flex-end/ko-orphan-nobr | 72a(next): star-sweep-penalty-removed/score-sweep-penalty-removed | 73a(next): daystreak-chip-mainscreen | 74a(next): header-3lines/daystreak-by-heart/heart-bonus-cap10 | 75a(next): errlog-local | 76a(next): hall-spare-match-screen | 77a(next): prefs-mirror/inapp-review-7 | 78a(next): font-add-gwang-bal-hyu | 80a(next): errlog-removed/daystreak-size-as-heart | 81a(next): daystreak-cal-svg | 82a(next): daily-challenge/daily-notify/font-add-6/fold-topbar | 83a(next): header-2lines/daily-card-autohide | 84a(next): web-daily-share/report-no-lvline | 84c(next): share-copy-feedback | 84d(next): share-text-order | 84e(next): name-1231-first | 85a(next): dev-mode-credits-20taps | 85b(next): daily-hint-note | 85c(next): daily-hints-unlimited | 85d(next): hint-wording | 86a(next): name-short-full/notif-note/same-hint-wording | 87a: trap-hint-wording(user)+font-dul | 87b: tut3-lock-linebreaks | 88a: lang-by-phone(index_en.html) | 89a: undo-history-saved(3) | 91a: likes(clear-btn/like-tab/hold-unlike) | 92a: report-gaps-11 | 93a: daily-pool-v2(no-seen-levels) | 94a: sheet-no-backdrop-blur(scroll-jank) | RELEASE: TEST=false -->
+<!-- BAKE-ENGINE: 2026-08-21 09:44Z sha1=dfb557f91be0 lv1=19 lv3333=135 | PATCH-2026-08-21b: vol/back/splash | PATCH-2026-08-27a: ghostclick/save-clean/ad-dismiss/fitboard | 27b: tutbtn/scoreorder/rules4x4 | 27c(검증제안): touchstart-ghost/heartgate/sheet-return/ad-inflight | 27d: addeclined-ghostbtn | 27e: save-coalesce | 28a: freehint20/no-pct/tip-blink | 28b: fxvol | 28c: stars-by-miss/recs-migrate | 28d(2차검증): tip-freeze/tip-double/flawless/data-ad/init-guard | 28e: savegap-1s | 29a: rebake-lv1-30 | 29b: sound-settings-order | 29c: fxicon/sweep-stars | 30a: tap-outside/cheer-loudness | 30b: one-tutorial-popup | 30c: report-no-overflow/volrow-narrow | 31a: page-picker | 32a: hint-hall-general | 33a: hint-hall-full-k | 34a(3차검증): miss-star-sync/sweep-reason/pen-cap-n/ads-retry | 34b: tip-italic-fix | 35a: font-coverage | 36a: tidy-note/tapthrough/tip-close | 37a: tip-rewrite | 38a(4차검증): hall-axis-words/press-title-axis/tidy-region/tidy-autosweep-gate/combo-dup | 38b(5차검증): hint-cost-fix/dup-sentence/title-clash/strategy-text | 38c(6차검증제안): hint-cost-digits/hall-fill-axis/squeeze-title-dup/guard-name | 38d: reset-gate-fix | 39a: korean-linebreak | 40a: tip-contradiction-form | 41a: tip-linebreaks | 42a: flawless-fix/flawless-show/starpct-cap | 43a: flawless-allfaces-3s-cheer | 44a: crowd-sound/firework-rework | 45a: applause-rework | 46a: hide-star-penalty | 47a: sweep-pen-show/playtime | 47b: daily-streak | 47c: chapters-badges | 47d: colorblind-patterns | 47e: daily-toast | 47f: font-safe-wording | 48a: sound-balance | 49a: louder-max | 50a: louder-key/slider-preview | 51a: tip-particle-bold | 52a: tip-unbold | 53a: first-time-learn | 54a: learn-linebreaks | 55a(8차검증): drag-xtaps/boom-clear/learn-text/daily-visible/vol-fallback | 56a: real-crowd-sample | 57a: vib-pattern-fix/kits-trim/slider-ux/credit | 58a: real-firework-samples | 59a: credit-exact | 60a(9차검증): vib-silent-load/preload-retry/credit-derivative | 61a: credit-cc0-fix | 62a: stats-layout | 63a: chapter-list/statbox-align | 64a: chaplist-align | 65a(10차검증): drop-dead-vars | 66a: credit-bottom | 67a: hall-rewrite | 68a: hall-unify | 69a(12차검증): hall-A1 | 70a: hall-이 | 71a(next): statbox-flex-end/ko-orphan-nobr | 72a(next): star-sweep-penalty-removed/score-sweep-penalty-removed | 73a(next): daystreak-chip-mainscreen | 74a(next): header-3lines/daystreak-by-heart/heart-bonus-cap10 | 75a(next): errlog-local | 76a(next): hall-spare-match-screen | 77a(next): prefs-mirror/inapp-review-7 | 78a(next): font-add-gwang-bal-hyu | 80a(next): errlog-removed/daystreak-size-as-heart | 81a(next): daystreak-cal-svg | 82a(next): daily-challenge/daily-notify/font-add-6/fold-topbar | 83a(next): header-2lines/daily-card-autohide | 84a(next): web-daily-share/report-no-lvline | 84c(next): share-copy-feedback | 84d(next): share-text-order | 84e(next): name-1231-first | 85a(next): dev-mode-credits-20taps | 85b(next): daily-hint-note | 85c(next): daily-hints-unlimited | 85d(next): hint-wording | 86a(next): name-short-full/notif-note/same-hint-wording | 87a: trap-hint-wording(user)+font-dul | 87b: tut3-lock-linebreaks | 88a: lang-by-phone(index_en.html) | 89a: undo-history-saved(3) | 91a: likes(clear-btn/like-tab/hold-unlike) | 92a: report-gaps-11 | 93a: daily-pool-v2(no-seen-levels) | 94a: sheet-no-backdrop-blur(scroll-jank) | 95a: chapter-label-at-of-end(201/300)+bar-cleared | 96a: gear-icon-symmetric-6 | 97a: ump-consent(eea)+privacy-button | RELEASE: TEST=false -->
 </body>
 </html>
