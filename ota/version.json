@@ -1,0 +1,10 @@
+{
+    "seq":  2,
+    "needBuild":  11,
+    "url":  "https://1231studio.github.io/mines_daily/ota/w2.zip",
+    "sha256":  "e311ab68c7b96eb1831d8ac87aa06e6901b4aefc98fd17e3e885a8d431810c44",
+    "size":  1018009,
+    "commit":  "8b5a02d",
+    "at":  "2026-11-15T15:31:42+09:00",
+    "channel":  "ota"
+}
