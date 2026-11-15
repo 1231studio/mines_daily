@@ -1,10 +1,10 @@
 {
-    "seq":  7,
+    "seq":  8,
     "needBuild":  11,
-    "url":  "https://1231studio.github.io/mines_daily/ota-test/w7.zip",
-    "sha256":  "af3f5c26d97f8a2ca4f392c87cddcf27e34774ace6c868514e3db4e6f7cd6a80",
+    "url":  "https://1231studio.github.io/mines_daily/ota-test/w8.zip",
+    "sha256":  "6fc2a112d1d390e8c9fe6ab15d52d622c6679d3f3eff1ccbf9bff9733d454ecc",
     "size":  1019363,
     "commit":  "4d42f31+수정중",
-    "at":  "2026-11-15T18:02:27+09:00",
+    "at":  "2026-11-16T01:25:45+09:00",
     "channel":  "ota-test"
 }
