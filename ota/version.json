@@ -1,10 +1,10 @@
 {
-    "seq":  4,
+    "seq":  5,
     "needBuild":  11,
-    "url":  "https://1231studio.github.io/mines_daily/ota/w4.zip",
-    "sha256":  "5e2f6a3620da12169a4a04ea0b60e87a3e939a97d43cc5ec87ae162a7399675d",
-    "size":  1018826,
-    "commit":  "afaa6e2",
-    "at":  "2026-11-15T16:51:41+09:00",
+    "url":  "https://1231studio.github.io/mines_daily/ota/w5.zip",
+    "sha256":  "2e984b11007021f66be47bb3e0a232bf58dcab41a930d6e0a9eb4eb019235bb3",
+    "size":  1019362,
+    "commit":  "4d42f31",
+    "at":  "2026-11-15T17:43:56+09:00",
     "channel":  "ota"
 }
